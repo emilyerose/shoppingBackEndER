@@ -4,15 +4,34 @@ const { Product, Category, Tag, ProductTag } = require('../../models');
 // The `/api/products` endpoint
 
 // get all products
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   // find all products
+  const userData = await Product.findAll().catch((err) => {
+    res.json(err);
+  });
+  res.json(userData);
   // be sure to include its associated Category and Tag data
 });
 
 // get one product
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   // find a single product by its `id`
   // be sure to include its associated Category and Tag data
+    try {
+      // First, we find a product using their primary key (provided by params)
+      const productData = await Product.findByPk(req.params.id, {
+        include: [{ model: Category, through: ProductTag}, { model: Tag, through: ProductTag }],
+      });
+      // If productData evaluates as false (no product exists with that primary key), then we will send an error message
+      if (!productData) {
+        res.status(404).json({ message: 'No product with this id!' });
+        return;
+      }
+      // Otherwise, the user will see productData
+      res.status(200).json(JSON.stringify(productData));
+    } catch (err) {
+      res.status(400).json(err);
+    }
 });
 
 // create new product
@@ -89,8 +108,22 @@ router.put('/:id', (req, res) => {
     });
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   // delete one product by its `id` value
+  try {
+    const productData = await Product.destroy({
+      where: {
+        id: req.params.id
+      }
+    })
+  
+  if (!productData) {
+    res.status(404).json({ message: 'No product found with this id!' });
+    return;
+  }
+  res.status(200).json(productData);
+}
+  catch (err) { res.status(500).json(err) }
 });
 
 module.exports = router;
